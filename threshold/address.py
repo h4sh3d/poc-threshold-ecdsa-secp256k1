@@ -182,21 +182,20 @@ class Share(object):
 
     def d_pub(self, i):
         if i >= pow(2, 31):
-            return False
-        else:
-            # Not hardened
-            k = "%x" % self.chain
-            data = "00%s%08x" % (ecdsa.expand_pub(self.master_pub), i)
-            hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
-            l = binascii.hexlify(hmac)
-            point = ecdsa.point_mult(self.master_pub, long(l, 16))
-            data = "%08x" % (i)
-            hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
-            l = binascii.hexlify(hmac)
-            c = long(l, 16)
-            share = Share(c, self.master, self.secret)
-            share.set_master_pub(point)
-            return share
+            raise Exception("Impossible to hardened")
+        # Not hardened
+        k = "%x" % self.chain
+        data = "00%s%08x" % (ecdsa.expand_pub(self.master_pub), i)
+        hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
+        l = binascii.hexlify(hmac)
+        point = ecdsa.point_mult(self.master_pub, long(l, 16))
+        data = "%08x" % (i)
+        hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
+        l = binascii.hexlify(hmac)
+        c = long(l, 16)
+        share = Share(c, self.master, self.secret)
+        share.set_master_pub(point)
+        return share
 
     def d_priv(self, i):
         k = "%x" % self.chain
@@ -207,22 +206,18 @@ class Share(object):
         if i >= pow(2, 31):
             # Hardened
             data = "00%32x%08x" % (self.secret, i)
-            hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
-            l = binascii.hexlify(hmac)
-            key = long(l, 16) * self.secret
-            point = ecdsa.point_mult(self.master_pub, long(l, 16))
+            
         else:
             # Not hardened
             data = "00%s%08x" % (ecdsa.expand_pub(self.master_pub), i)
-            hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
-            l = binascii.hexlify(hmac)
-            key = long(l, 16) * self.secret
-            point = ecdsa.point_mult(self.master_pub, long(l, 16))
-
+            
+        hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
+        l = binascii.hexlify(hmac)
+        key = long(l, 16) * self.secret
+        point = ecdsa.point_mult(self.master_pub, long(l, 16))
         share = Share(c, self.master, key)
         share.set_master_pub(point)
         return share
-
 
     def d(self, index):
         if self.master:
@@ -286,6 +281,11 @@ if __name__ == "__main__":
     print s1.address()
     print s2.address()
     print s3.address()
+
+    print "Hardened derivation"
+    print get(s1.derive("m/44/0/1").master_pub)
+    print get(s1.derive("m/44/0/1'").master_pub)
+
 
     print "Master public key"
     s1 = s1.derive("m/44/0/1")
