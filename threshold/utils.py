@@ -14,6 +14,31 @@ except ImportError:
 _USE_MOD_FROM_GMP_SIZE = (1 << (8*2))
 
 
+def gcd(a, b):
+    """Compute the greatest common divisor (gcd) using the Euclid algorithm"""
+    if a == b:
+        return a
+    if a > b:
+        return gcd(a - b, b)
+    elif b > a:
+        return gcd(a, b - a)
+
+def nonrec_gcd(a, b):
+    """Compute the greatest common divisor (gcd) using the Euclid algorithm with
+    a non-recursive approach"""
+    if a < b:
+        a = a + b
+        b = a - b
+        a = a - b
+    if b == 0:
+        return a
+    while a % b != 0:
+        a = a + b
+        b = a - b
+        a = a - b
+        b = b % a
+    return b
+
 def powmod(a, b, c):
     """
     Uses GMP, if available, to do a^b mod c where a, b, c
@@ -71,6 +96,8 @@ def inverse_mod(a, m):
 def randomnumber(n, inf=1):
     return random.SystemRandom().randrange(inf, n)
 
+def is_prime(p):
+    return gmpy2.is_prime(p)
 
 def getprimeover(N):
     """Return a random N-bit prime number using the System's best

@@ -4,31 +4,6 @@ import utils
 
 KEY_LENGHT = 4096
 
-def gcd(a, b):
-    """Compute the greatest common divisor (gcd) using the Euclid algorithm"""
-    if a == b:
-        return a
-    if a > b:
-        return gcd(a - b, b)
-    elif b > a:
-        return gcd(a, b - a)
-
-def nonrec_gcd(a, b):
-    """Compute the greatest common divisor (gcd) using the Euclid algorithm with
-    a non-recursive approach"""
-    if a < b:
-        a = a + b
-        b = a - b
-        a = a - b
-    if b == 0:
-        return a
-    while a % b != 0:
-        a = a + b
-        b = a - b
-        a = a - b
-        b = b % a
-    return b
-
 def inverse(a, n):
     """Find the inverse of a modulo n if it exists"""
     t = 0
@@ -54,40 +29,45 @@ def lcm(a, b):
     n = a * b
     if n < 0:
         n = n * -1
-    return int(n / nonrec_gcd(a, b))
+    return int(n / utils.nonrec_gcd(a, b))
 
 def L(x, n):
     return int((x - 1) / n)
 
 def key_gen(p, q):
-    if nonrec_gcd(p, q) != 1:
+    if utils.nonrec_gcd(p, q) != 1:
         # non-distinct
         exit(1)
     n = p * q
     g = n + 1
-    phi = (p-1) * (q-1)
-    lmdba = phi
-    mu = utils.invert(phi, n)
-    return (n, g), (lmdba, mu)
+    lmdba = (p-1) * (q-1)
+    mu = utils.invert(lmdba, n)
+    return (n, g), (n, g, lmdba, mu)
 
 def gen_key():
     p = utils.getprimeover(KEY_LENGHT>>1)
     q = utils.getprimeover(KEY_LENGHT>>1)
     return key_gen(p, q)
 
-def R(n):
+def R_old(n):
     with open("/dev/urandom", 'rb') as f:
         r = struct.unpack(">Q", f.read(8))[0] % n
         return r
+
+def R(n):
+    while True:
+        r = utils.randomnumber(n)
+        if utils.nonrec_gcd(r, n) == 1:
+            return r
 
 def encrypt(m, pub):
     n, g = pub
     n2 = n * n
     r = R(n)
-    return (utils.powmod(g, m, n2) * utils.powmod(r, n, n2)) % n2
+    return (utils.powmod(g, m, n2) * utils.powmod(r, n, n2)) % n2, r
 
-def decrypt(c, n, priv):
-    lmdba, mu = priv
+def decrypt(c, priv):
+    n, g, lmdba, mu = priv
     n2 = n * n
     return L(utils.powmod(c, lmdba, n2), n) * mu % n
 
@@ -106,8 +86,7 @@ if __name__ == "__main__":
 
     # http://www.primos.mat.br/primeiros_10000_primos.txt
     pub, priv = key_gen(p, q)
-    n, g = pub
-    lmdba, mu = priv
+    n, g, lmdba, mu = priv
     n2 = n * n
 
     # print(pub, priv)
@@ -117,8 +96,8 @@ if __name__ == "__main__":
     
     print(s1)
     print(s2)
-    c1 = encrypt(s1, pub)
-    c2 = encrypt(s2, pub)
+    c1, r1 = encrypt(s1, pub)
+    c2, r2 = encrypt(s2, pub)
     # print(c1)
     # print(c2)
 
@@ -133,15 +112,15 @@ if __name__ == "__main__":
     # 180 * 100 + 180 * 100 = 36'000
     test2 = add(mult(c1, 100, n2), mult(c1, 100, n2), n2)
 
-    madd = decrypt(cadd, n, priv)
-    mmult = decrypt(cmult, n, priv)
-    mtest = decrypt(test, n, priv)
-    mtest2 = decrypt(test2, n, priv)
-    m1 = decrypt(c1, n, priv)
-    m2 = decrypt(c2, n, priv)
+    madd = decrypt(cadd, priv)
+    mmult = decrypt(cmult, priv)
+    mtest = decrypt(test, priv)
+    mtest2 = decrypt(test2, priv)
+    m1 = decrypt(c1, priv)
+    m2 = decrypt(c2, priv)
 
     print("add c1 + c2:", madd)
     print("mult c1 * 20:", mmult)
     print("test composition:", mtest)
     print("test composition 2:", mtest2)
-    print(decrypt(encrypt(10, pub), n, priv))
+    print(decrypt(encrypt(10, pub)[0], priv))
