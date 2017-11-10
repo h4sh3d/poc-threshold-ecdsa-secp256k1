@@ -36,7 +36,8 @@ def sign(m, p, q, g, x):
     s = inv * h % q
     return r, s
 
-def verify(m, r, s, p, q, g, y):
+def verify(m, sig, y, p=P, q=Q, g=G):
+    r, s = sig
     w = utils.invert(s, q)
     u1 = m * w % q
     u2 = r * w % q
@@ -54,8 +55,8 @@ if __name__ == "__main__":
     m = long(h.hexdigest(), 16)
     
     r, s = sign(m, P, Q, G, priv)
-    print(verify(m, r, s, P, Q, G, pub))
+    print(verify(m, (r, s), pub))
 
     h.update("an other message".encode("utf-8"))
     m = long(h.hexdigest(), 16)
-    print(verify(m, r, s, P, Q, G, pub))
+    print(verify(m, (r, s), pub))

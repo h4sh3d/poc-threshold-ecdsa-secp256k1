@@ -86,45 +86,75 @@ def pi_verify(pi, c, d, w1, w2, m1, m2, ntild, h1, h2, ka_pub):
     n2 = n * n
     q3 = pow(dsa.Q, 3)
     if s1 > q3 or t1 > q3:
-        # print("+1")
         return False
     if not pow(c, s1, dsa.P) == (pow(w1, e, dsa.P) * u1) % dsa.P:
-        # print("+2")
         return False
     if not ((pow(g, s1, n2) * pow(s2, n, n2)) % n2) == ((pow(m1, e, n2) * u2) % n2):
-        # print("+3")
         return False
     verif1 = (pow(h1, s1, ntild) * pow(h2, s3, ntild)) % ntild
     verif2 = (pow(z1, e, ntild) * u3) % ntild
     if not verif1 == verif2:
-        # print("+4")
         return False
     if not pow(d, (t1 + t2) % dsa.Q, dsa.P) == ((pow(y, e, dsa.P) * v1) % dsa.P):
-        # print("+5")
         return False
     verif1 = (pow(w2, s1, dsa.P) * pow(d, t2, dsa.P)) % dsa.P
     verif2 = (pow(y, e, dsa.P) * v2) % dsa.P
     if not verif1 == verif2:
-        # print("+6")
         return False
     if not (pow(g, t1, n2) * pow(t3, n, n2)) % n2 == (pow(m2, e, n2) * v3) % n2:
-        # print("+7")
         return False
     verif1 = (pow(h1, t1, ntild) * pow(h2, t4, ntild)) % ntild
     if not verif1 == (pow(z2, e, ntild) * v4) % ntild:
-        # print("+8")
         return False
     return True
 
-def pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, zkpparam, ka_pub, kb_pub):
+def pi2(m, c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, zkpparam, ka_pub, kb_pub):
     pkn, g = ka_pub
     pkn2 = pkn * pkn
     pknprim, gprim = kb_pub
     pknprim2 = pknprim * pknprim
     ntild, h1, h2 = zkpparam
     q3 = pow(dsa.Q, 3)
+    q5 = pow(dsa.Q, 5)
+    q6 = pow(dsa.Q, 6)
+    q8 = pow(dsa.Q, 8)
     q3ntild = q3 * ntild
     qntild = dsa.Q * ntild
+
+    if pkn <= q8:
+        return False
+    if pknprim <= q6:
+        return False
+
+    if (utils.nonrec_gcd(c, dsa.P) != 1 or
+            utils.nonrec_gcd(d, dsa.P) != 1 or
+            utils.nonrec_gcd(w1, dsa.P) != 1 or
+            utils.nonrec_gcd(w2, dsa.P) != 1):
+        return False
+
+    if (pow(c, dsa.Q, dsa.P) != 1 or
+            pow(d, dsa.Q, dsa.P) != 1 or
+            pow(w1, dsa.Q, dsa.P) != 1 or
+            pow(w2, dsa.Q, dsa.P) != 1):
+        return False
+
+    if m1 > pknprim2 or utils.nonrec_gcd(m1, pknprim2) != 1:
+        return False
+    if m2 > pkn2 or utils.nonrec_gcd(m2, pkn2) != 1:
+        return False
+
+    if x1 > dsa.Q or x2 > dsa.Q:
+        print x1 > dsa.Q
+        print x2 > dsa.Q
+        return False
+    if x3 > q5:
+        return False
+
+    if r1 > pknprim or utils.nonrec_gcd(r1, pknprim) != 1:
+        return False
+    if r2 > pkn or utils.nonrec_gcd(r2, pkn) != 1:
+        return False
+
     alpha = utils.randomnumber(q3)
     beta = rnd_inv(pknprim)
     gamma = utils.randomnumber(q3ntild)
@@ -148,7 +178,10 @@ def pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, zkpparam, ka_pub, kb_p
     y = pow(d, x2 + p3, dsa.P)
     v1 = pow(d, delta + epsilon, dsa.P)
     v2 = (pow(w2, alpha, dsa.P) * pow(d, epsilon, dsa.P)) % dsa.P
-    v3 = (pow(m3, alpha, pkn2) * pow(m4, delta, pkn2) * pow(g, dsa.Q * sigma, pkn2) * pow(mu, pkn, pkn2)) % pkn2
+
+    v3 = (pow(m3, alpha, pkn2) * pow(m4, delta, pkn2) * 
+        pow(g, dsa.Q * sigma, pkn2) * pow(mu, pkn, pkn2)) % pkn2
+    
     v4 = (pow(h1, delta, ntild) * pow(h2, vu, ntild)) % ntild
     z3 = (pow(h1, x3, ntild) * pow(h2, p4, ntild)) % ntild
     v5 = (pow(h1, sigma, ntild) * pow(h2, tau, ntild)) % ntild
@@ -177,6 +210,7 @@ def pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, zkpparam, ka_pub, kb_p
     s1 = e * x1 + alpha
     s2 = (pow(r1, e, pknprim) * beta) % pknprim
     s3 = e * p1 + gamma
+    s4 = e * ((x1 * m) % dsa.Q) + alpha
 
     t1 = e * x2 + delta
     t2 = (e * p3 + epsilon) % dsa.Q
@@ -185,10 +219,12 @@ def pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, zkpparam, ka_pub, kb_p
     t5 = e * x3 + sigma
     t6 = e * p4 + tau
 
-    return z1, u1, u2, u3, z2, z3, y, v1, v2, v3, v4, v5, s1, s2, s3, t1, t2, t3, t4, t5, t6, e
+    return (z1, u1, u2, u3, z2, z3, y, v1, v2, v3, v4, v5, s1, s2, s3, s4, t1, 
+        t2, t3, t4, t5, t6, e)
 
 def pi2_verify(pi2, c, d, w1, w2, m1, m2, m3, m4, zkpparam, ka_pub, kb_pub):
-    z1, u1, u2, u3, z2, z3, y, v1, v2, v3, v4, v5, s1, s2, s3, t1, t2, t3, t4, t5, t6, e = pi2
+    (z1, u1, u2, u3, z2, z3, y, v1, v2, v3, v4, v5, s1, s2, s3, s4, t1, 
+        t2, t3, t4, t5, t6, e) = pi2
     pkn, g = ka_pub
     pkn2 = pkn * pkn
     pknprim, gprim = kb_pub
@@ -197,32 +233,34 @@ def pi2_verify(pi2, c, d, w1, w2, m1, m2, m3, m4, zkpparam, ka_pub, kb_pub):
 
     q3 = pow(dsa.Q, 3)
     q7 = pow(dsa.Q, 7)
-    # if s1 > q3 or t1 > q3:
-    #     print("+1")
-    #     return False
-    # if t5 > q7:
-    #     print(t5)
-    #     print(q7)
-    #     print("+2")
-    #     return False
-    if not pow(c, s1, dsa.P) == (pow(w1, e, dsa.P) * u1) % dsa.P:
-        print("+3")
+    if s1 > q3 or t1 > q3:
         return False
-    verif1 = (pow(gprim, s1, pknprim2) * pow(s2, pknprim, pknprim2)) % pknprim2
+    if t5 > q7:
+        return False
+    if not pow(c, s1, dsa.P) == (pow(w1, e, dsa.P) * u1) % dsa.P:
+        return False
+    verif1 = (pow(gprim, s4, pknprim2) * pow(s2, pknprim, pknprim2)) % pknprim2
     verif2 = (pow(m1, e, pknprim2) * u2) % pknprim2
     if not verif1 == verif2:
-        print("+4")
         return False
-    if not (pow(h1, s1, ntild) * pow(h2, s3, ntild)) % ntild == (pow(z1, e, ntild) * u3) % ntild:
-        print("+5")
+    if (not (pow(h1, s1, ntild) * pow(h2, s3, ntild)) % ntild 
+        == (pow(z1, e, ntild) * u3) % ntild):
         return False
     if not (pow(d, t1 + t2, dsa.P)) == (pow(y, e, dsa.P) * v1) % dsa.P:
-        print("+6")
         return False
-    verif1 = (pow(m3, s1, pkn2) * pow(m4, t1, pkn2) * pow(g, dsa.Q * t5, pkn2) * pow(t3, pkn, pkn2)) % pkn2
+    verif1 = (pow(m3, s4, pkn2) * pow(m4, t1, pkn2) * 
+        (utils.powmod(g, dsa.Q * t5, pkn2) * utils.powmod(t3, pkn, pkn2)) 
+        % pkn2) % pkn2
     verif2 = (pow(m2, e, pkn2) * v3) % pkn2
     if not verif1 == verif2:
-        print("+7")
+        return False
+    verif1 = (pow(h1, t1, ntild) * pow(h2, t4, ntild)) % ntild
+    verif2 = (pow(z2, e, ntild) * v4) % ntild
+    if not verif1 == verif2:
+        return False
+    verif1 = (pow(h1, t5, ntild) * pow(h2, t6, ntild)) % ntild
+    verif2 = (pow(z3, e, ntild) * v5) % ntild
+    if not verif1 == verif2:
         return False
     return True
 
@@ -243,5 +281,3 @@ if __name__ == "__main__":
 
     res = pi(1,2,3,4,5,6,1,2,1,2, n, h1, h2, pk)
     print(res)
-
-    print(pi_verify(res, 1,2,3,4,5,6, n, h1, h2, pk))
