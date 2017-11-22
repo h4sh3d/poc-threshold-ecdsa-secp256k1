@@ -176,6 +176,14 @@ if __name__ == "__main__":
     print("ECDSA")
     # test()
 
+    priv = 0xf8dcb8663acbd64296da17d9692a8971286cee1c41621660ab5d925767df7cc5
+    res = point_mult(G, priv)
+    rec = recover_pub("0473b7aaf653110c20d3c42c18017b8243d6f5a99cb84fba0cbc5ef3ffb74ffc01a9571fb974d6337a86f37e1cb5a8aa293caaf070971bf7e4ac7f1047f03133de")
+
+    print res
+    print rec
+    print res == rec
+
     pub, priv = key_gen(G)
     message = "Hello world"
     h = hashlib.sha256()
