@@ -119,9 +119,9 @@ class ECPrivateKey(univ.Sequence):
 class HEPublicKey(univ.Sequence):
     """Homomorphic Encryption Public Key Structure
     HEPublicKey ::= SEQUENCE {
-        version        INTEGER,
-        modulus        INTEGER,
-        generator      INTEGER
+        version           INTEGER,
+        modulus           INTEGER,  -- p * q
+        generator         INTEGER   -- n + 1
     }
     """
     componentType = namedtype.NamedTypes(
@@ -133,19 +133,35 @@ class HEPublicKey(univ.Sequence):
 class HEPrivateKey(univ.Sequence):
     """Homomorphic Encryption Private Key Structure
     HEPrivateKey ::= SEQUENCE {
-        version        INTEGER,
-        privateKey     INTEGER,
-        modulus        INTEGER,
-        generator      INTEGER
+        version           INTEGER,
+        modulus           INTEGER,  -- p * q
+        prime1            INTEGER,  -- p
+        prime2            INTEGER,  -- q
+        generator         INTEGER,  -- n + 1
+        privateExponent   INTEGER,  -- (p - 1) * (q - 1)
+        coefficient       INTEGER   -- (inverse of privateExponent) mod (p * q)
     }
     """
     componentType = namedtype.NamedTypes(
         namedtype.NamedType("version", univ.Integer()),
-        namedtype.NamedType("privateKey", univ.Integer()),
         namedtype.NamedType("modulus", univ.Integer()),
-        namedtype.NamedType("generator", univ.Integer())
+        namedtype.NamedType("prime1", univ.Integer()),
+        namedtype.NamedType("prime2", univ.Integer()),
+        namedtype.NamedType("generator", univ.Integer()),
+        namedtype.NamedType("privateExponent", univ.Integer()),
+        namedtype.NamedType("coefficient", univ.Integer())
     )
-        
+
+class HEEncryptedMessage(univ.Sequence):
+    """Homomorphic Encrypted Message Structure
+    HEEncryptedMessage ::= SEQUENCE {
+        message            INTEGER
+    }
+    """
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType("message", univ.Integer())
+    )
+
 
 class ThresholdECPrivateKey(univ.Sequence):
     """Threshold Elliptic Curve Private Key Structure
@@ -174,6 +190,18 @@ class ThresholdECPrivateKey(univ.Sequence):
     )
 
 
+def hex_dump(to_encode):
+    rr = binascii.hexlify(der_encoder(to_encode))
+    jj = 1
+    res = ""
+    for d1, d2 in zip(rr[::2], rr[1::2]):
+        i = str(d1)+str(d2)
+        res += '0x'+i+', '
+        if jj % 16 == 0:
+            res += '\n'
+        jj += 1
+    print res
+    print jj-1
 
 def i2osp(x, xLen):
     if x >= pow(256, xLen):
@@ -240,23 +268,22 @@ def generate_tecdsa_pem(share, pub, privEnc, pairedEnc):
     
     # privateEnc
     privateEnc = HEPrivateKey()
-    n, g, lmbda, mu = privEnc
+    n, p, q, g, lmbda, mu = privEnc
     privateEnc['version'] = 1
-    privateEnc['privateKey'] = lmbda
     privateEnc['modulus'] = n
+    privateEnc['prime1'] = p
+    privateEnc['prime2'] = q
     privateEnc['generator'] = g
+    privateEnc['privateExponent'] = lmbda
+    privateEnc['coefficient'] = mu
+    
+    # hex_dump(privateEnc)
 
-    rr = binascii.hexlify(der_encoder(privateEnc))
-    jj = 1
-    res = ""
-    for d1, d2 in zip(rr[::2], rr[1::2]):
-        i = str(d1)+str(d2)
-        res += '0x'+i+', '
-        if jj % 16 == 0:
-            res += '\n'
-        jj += 1
-    print res
-    print jj
+    enc_message = HEEncryptedMessage()
+    c, r = paillier.encrypt(123456789, pairedEnc)
+    enc_message['message'] = c
+
+    hex_dump(enc_message)
 
     ecPrivateKey.setComponentByName('privateEnc', privateEnc)
 
@@ -266,6 +293,9 @@ def generate_tecdsa_pem(share, pub, privEnc, pairedEnc):
     publicEnc['version'] = 1
     publicEnc['modulus'] = n
     publicEnc['generator'] = g
+    
+    # hex_dump(publicEnc)
+
     ecPrivateKey.setComponentByName('pairedPublicEnc', publicEnc)
 
     ecParam = ECParameters().subtype(
@@ -343,10 +373,12 @@ def gen_pem(name1, name2):
 
     with open(name1, 'w') as file1:
         with open(name2, 'w') as file2:
-            file1.write(generate_tecdsa_pem(priv1, pub, privEncPriv, pairedEncPub))
-            file2.write(generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub))
+            generate_tecdsa_pem(priv1, pub, privEncPriv, pairedEncPub)
+            # generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub)
+            # file1.write(generate_tecdsa_pem(priv1, pub, privEncPriv, pairedEncPub))
+            # file2.write(generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub))
 
 if __name__ == '__main__':
-    # gen_pem('id_tecdsa1', 'id_tecdsa2')
-    parse_tecdsa_pem('id_tecdsa1')
+    gen_pem('id_tecdsa1', 'id_tecdsa2')
+    # parse_tecdsa_pem('id_tecdsa1')
     # parse_tecdsa_pem('id_tecdsa2')

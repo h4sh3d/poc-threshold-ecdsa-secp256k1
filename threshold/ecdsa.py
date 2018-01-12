@@ -172,10 +172,7 @@ def test():
     print(y, z)
     print(y == z)
 
-if __name__ == "__main__":
-    print("ECDSA")
-    # test()
-
+def run_ecdsa():
     priv = 0xf8dcb8663acbd64296da17d9692a8971286cee1c41621660ab5d925767df7cc5
     res = point_mult(G, priv)
     rec = recover_pub("0473b7aaf653110c20d3c42c18017b8243d6f5a99cb84fba0cbc5ef3ffb74ffc01a9571fb974d6337a86f37e1cb5a8aa293caaf070971bf7e4ac7f1047f03133de")
@@ -195,3 +192,25 @@ if __name__ == "__main__":
     h.update("an other one".encode("utf-8"))
     m = long(h.hexdigest(), 16)
     print(verify(sig, m, pub, G, n))
+
+if __name__ == "__main__":
+    print("ECDSA")
+    # test()
+    # run_ecdsa()
+
+    k1 = utils.randomnumber(n-1, inf=1)
+    z1 = utils.invert(k1, n)
+
+    k2 = utils.randomnumber(n-1, inf=1)
+    z2 = utils.invert(k2, n)
+
+    r2 = point_mult(G, k2)
+    r = point_mult(r2, k1)
+    r1 = point_mult(r, z1)
+
+    print r2
+    print r
+    print r1
+
+
+    

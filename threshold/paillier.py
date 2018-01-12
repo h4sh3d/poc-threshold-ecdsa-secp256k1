@@ -42,7 +42,7 @@ def key_gen(p, q):
     g = n + 1
     lmdba = (p-1) * (q-1)
     mu = utils.invert(lmdba, n)
-    return (n, g), (n, g, lmdba, mu)
+    return (n, g), (n, p, q, g, lmdba, mu)
 
 def gen_key():
     p = utils.getprimeover(KEY_LENGHT>>1)
@@ -67,7 +67,7 @@ def encrypt(m, pub):
     return (utils.powmod(g, m, n2) * utils.powmod(r, n, n2)) % n2, r
 
 def decrypt(c, priv):
-    n, g, lmdba, mu = priv
+    n, p, q, g, lmdba, mu = priv
     n2 = n * n
     return L(utils.powmod(c, lmdba, n2), n) * mu % n
 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     # http://www.primos.mat.br/primeiros_10000_primos.txt
     pub, priv = key_gen(p, q)
-    n, g, lmdba, mu = priv
+    n, p, q, g, lmdba, mu = priv
     n2 = n * n
 
     # print(pub, priv)
