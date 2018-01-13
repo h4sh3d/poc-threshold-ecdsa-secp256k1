@@ -75,8 +75,6 @@ def bob_round_2(pi, m, alpha, zeta, r, k2, x2, r2, y1, y2, ka_pub, kb_pub, zkp):
     x2 = x2z2
     x4 = m
     x5 = rq
-    # x1 = (m * z2) % ecdsa.n
-    # x2 = (rq * x2z2) % ecdsa.n
 
     pi2 = eczkp.pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, x4, x5, zkp, ka_pub, kb_pub)
     if not pi2:
@@ -133,8 +131,8 @@ def run_secdsa():
     h = hashlib.sha256()
     h.update(message.encode("utf-8"))
     m = long(h.hexdigest(), 16)
-    print message
-    print m
+    print "Message to sign: ", message
+    print "Hash: ", m
 
     # ALICE ROUND 1
     k1, z1, alpha, zeta, rr1, rr2 = alice_round_1(m, x1, y1, ka_pub, ka_priv)
@@ -149,9 +147,10 @@ def run_secdsa():
     # ALICE ROUND 3 (final)
     sig = alice_round_3(pi2, r, r2, y2, mup, mu, alpha, zeta, zkp, ka_priv, kb_pub)
 
+    print "Signature:"
     print sig
     r, s = sig
-    print ecdsa.verify(sig, m, pub, ecdsa.G, ecdsa.n)
+    print "Sig status: ", ecdsa.verify(sig, m, pub, ecdsa.G, ecdsa.n)
     
     # h = hashlib.sha256()
     # h.update("an other one".encode("utf-8"))
