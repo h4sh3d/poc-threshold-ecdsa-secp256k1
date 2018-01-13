@@ -54,8 +54,8 @@ def bob_round_2(pi, m, alpha, zeta, r, k2, x2, r2, y1, y2, ka_pub, kb_pub, zkp):
         print "Error: zkp failed"
         exit(1)
 
-    mu1 = paillier.mult(alpha, (m * z2) % ecdsa.n, n2)
-    mu2 = paillier.mult(zeta, (rq * x2z2) % ecdsa.n, n2)
+    mu1 = paillier.mult(alpha, m * z2, n2)
+    mu2 = paillier.mult(zeta, rq * x2z2, n2)
     mu3, rnumb = paillier.encrypt(x3 * ecdsa.n, ka_pub)
     mu = paillier.add(paillier.add(mu1, mu2, n2), mu3, n2)
 

@@ -263,7 +263,7 @@ def pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, x4, x5, zkp, ka_pub, k
     s1 = e * x1 + alpha
     s2 = (pow(r1, e, pknprim) * beta) % pknprim
     s3 = e * p1 + gamma
-    s4 = e * ((x1 * x4) % ecdsa.n) + alpha
+    s4 = e * x1 * x4 + alpha
 
     # t1 = e * ((x2 * x5) % ecdsa.n) + delta
     t1 = e * x2 + delta
@@ -272,7 +272,7 @@ def pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, x4, x5, zkp, ka_pub, k
     t4 = e * p2 + nu
     t5 = e * x3 + sigma
     t6 = e * p4 + tau
-    t7 = e * ((x2 * x5) % ecdsa.n) + delta
+    t7 = e * x2 * x5 + delta
 
     print "\n****************************************\n"
 
@@ -286,7 +286,16 @@ def pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, x4, x5, zkp, ka_pub, k
 
     # print (pow(m3, alpha, pkn2) * pow(m4, delta, pkn2)) % pkn2 == ((pow(m3, s1, pkn2) * pow(invm2, e, pkn2)) * (pow(m4, t1, pkn2) * pow(invm4, e, pkn2))) % pkn2
 
-    print m2 == (pow(m3, ((x1 * x4) % ecdsa.n), pkn2) * pow(m4, ((x2 * x5) % ecdsa.n), pkn2) * pow(g, ecdsa.n * x3, pkn2) * pow(r2, pkn, pkn2)) % pkn2
+    print m2 == (pow(m3, x1 * x4, pkn2) * pow(m4, x2 * x5, pkn2) * pow(g, ecdsa.n * x3, pkn2) * pow(r2, pkn, pkn2)) % pkn2
+    
+    # print pow(m2, e, pkn2) == (pow(m3, x1 * x4 * e, pkn2) * pow(m4, x2 * x5 * e, pkn2) * pow(g, ecdsa.n * x3 * e, pkn2) * pow(r2, pkn * e, pkn2)) % pkn2
+
+    # v3inv = utils.inverse_mod(m2, pkn2)
+    # v3inv2 = utils.inverse_mod((pow(m3, x1 * x4, pkn2) * pow(m4, x2 * x5, pkn2) * pow(g, ecdsa.n * x3, pkn2) * pow(r2, pkn, pkn2)) % pkn2, pkn2)
+    # print pow(v3inv, e, pkn2) == pow(v3inv2, e, pkn2)
+
+    # v3inv3 = utils.inverse_mod(m2, pkn2)
+    # print m2 == (pow(m2, e + 1, pkn2) * pow(v3inv3, e, pkn2)) % pkn2
 
     print "\n****************************************\n"
 
@@ -302,8 +311,8 @@ def pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, x4, x5, zkp, ka_pub, k
     v2prim = ecdsa.point_add(
         ecdsa.point_add(ecdsa.point_mult(w2, s1), ecdsa.point_mult(d, t2)), 
         ecdsa.point_mult(y, minuse))
-    v3inv = utils.inverse_mod((pow(m3, ((x1 * x4) % ecdsa.n), pkn2) * pow(m4, ((x2 * x5) % ecdsa.n), pkn2) * pow(g, ecdsa.n * x3, pkn2) * pow(r2, pkn, pkn2)) % pkn2, pkn2)
-    v3prim = (pow(m3, s4, pkn2) * pow(m4, t7, pkn2) * pow(g, ecdsa.n * t5, pkn2) * pow(v3inv, e, pkn2)) % pkn2
+    v3inv = utils.inverse_mod(m2, pkn2)
+    v3prim = (pow(m3, s4, pkn2) * pow(m4, t7, pkn2) * pow(g, ecdsa.n * t5, pkn2) * pow(t3, pkn, pkn2) * pow(v3inv, e, pkn2)) % pkn2
     v4inv = utils.inverse_mod(z2, ntild)
     v4prim = (pow(h1, t1, ntild) * pow(h2, t4, ntild) * pow(v4inv, e, ntild)) % ntild
     v5inv = utils.inverse_mod(z3, ntild)
@@ -331,10 +340,10 @@ def pi2(c, d, w1, w2, m1, m2, m3, m4, r1, r2, x1, x2, x3, x4, x5, zkp, ka_pub, k
 
     print "\n****************************************\n"
 
-    return z1, z2, z3, y, e, s1, s2, s3, t1, t2, t3, t4, t5, t6
+    return z1, z2, z3, y, e, s1, s2, s3, s4, t1, t2, t3, t4, t5, t6, t7
 
 def pi2_verify(pi2, c, d, w1, w2, m1, m2, m3, m4, zkp, ka_pub, kb_pub):
-    z1, z2, z3, y, e, s1, s2, s3, t1, t2, t3, t4, t5, t6 = pi2
+    z1, z2, z3, y, e, s1, s2, s3, s4, t1, t2, t3, t4, t5, t6, t7 = pi2
     pkn, g = ka_pub
     pkn2 = pkn * pkn
     pknprim, gprim = kb_pub
@@ -353,7 +362,8 @@ def pi2_verify(pi2, c, d, w1, w2, m1, m2, m3, m4, zkp, ka_pub, kb_pub):
         ecdsa.point_add(ecdsa.point_mult(w2, s1), ecdsa.point_mult(d, t2)), 
         ecdsa.point_mult(y, minuse))
     v3inv = utils.inverse_mod(m2, pkn2)
-    v3prim = (pow(m3, s1, pkn2) * pow(m4, t1, pkn2) * pow(g, ecdsa.n * t5, pkn2) * pow(v3inv, e, pkn2)) % pkn2
+    v3prim = (pow(m3, s4, pkn2) * pow(m4, t7, pkn2) * pow(g, ecdsa.n * t5, pkn2) * 
+        pow(t3, pkn, pkn2) * pow(v3inv, e, pkn2)) % pkn2
     v4inv = utils.inverse_mod(z2, ntild)
     v4prim = (pow(h1, t1, ntild) * pow(h2, t4, ntild) * pow(v4inv, e, ntild)) % ntild
     v5inv = utils.inverse_mod(z3, ntild)
