@@ -162,7 +162,6 @@ class HEEncryptedMessage(univ.Sequence):
         namedtype.NamedType("message", univ.Integer())
     )
 
-
 class ThresholdECPrivateKey(univ.Sequence):
     """Threshold Elliptic Curve Private Key Structure
     ThresholdECPrivateKey ::= SEQUENCE {
@@ -170,8 +169,8 @@ class ThresholdECPrivateKey(univ.Sequence):
         privateShare         OCTET STRING,
         privateEnc           HEPrivateKey,
         pairedPublicEnc      HEPublicKey,
-        parameters       [0] ECParameters {{ NamedCurve }} OPTIONAL,
-        publicKey        [1] BIT STRING OPTIONAL
+        publicKey            OCTET STRING,
+        parameters       [0] ECParameters {{ NamedCurve }} OPTIONAL
     }
     """
     componentType = namedtype.NamedTypes(
@@ -179,13 +178,10 @@ class ThresholdECPrivateKey(univ.Sequence):
         namedtype.NamedType("privateShare", univ.OctetString()),
         namedtype.NamedType("privateEnc", HEPrivateKey()),
         namedtype.NamedType("pairedPublicEnc", HEPublicKey()),
+        namedtype.NamedType("publicKey", univ.OctetString()),
         namedtype.OptionalNamedType("parameters", 
             ECParameters().subtype(
                 implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
-                )),
-        namedtype.OptionalNamedType("publicKey", 
-            univ.BitString().subtype(
-                implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1)
                 )),
     )
 
@@ -262,9 +258,9 @@ def generate_ecdsa_pem(pk):
     return res
 
 def generate_tecdsa_pem(share, pub, privEnc, pairedEnc):
-    ecPrivateKey = ThresholdECPrivateKey()
-    ecPrivateKey['version'] = 1
-    ecPrivateKey['privateShare'] = ints2octs(i2osp(share, 32))
+    tecPrivateKey = ThresholdECPrivateKey()
+    tecPrivateKey['version'] = 1
+    tecPrivateKey['privateShare'] = ints2octs(i2osp(share, 32))
     
     # privateEnc
     privateEnc = HEPrivateKey()
@@ -279,13 +275,7 @@ def generate_tecdsa_pem(share, pub, privEnc, pairedEnc):
     
     # hex_dump(privateEnc)
 
-    enc_message = HEEncryptedMessage()
-    c, r = paillier.encrypt(123456789, pairedEnc)
-    enc_message['message'] = c
-
-    hex_dump(enc_message)
-
-    ecPrivateKey.setComponentByName('privateEnc', privateEnc)
+    tecPrivateKey.setComponentByName('privateEnc', privateEnc)
 
     # pairedPublicEnc
     publicEnc = HEPublicKey()
@@ -296,21 +286,25 @@ def generate_tecdsa_pem(share, pub, privEnc, pairedEnc):
     
     # hex_dump(publicEnc)
 
-    ecPrivateKey.setComponentByName('pairedPublicEnc', publicEnc)
+    tecPrivateKey.setComponentByName('pairedPublicEnc', publicEnc)
+
+    tecPrivateKey.setComponentByName('publicKey', univ.OctetString(
+        hexValue=ecdsa.expand_pub(pub)
+    ))
 
     ecParam = ECParameters().subtype(
                 implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
                 ) # 1.3.132.0.10 ansip256k1(10)
     ecParam.setComponentByName("namedCurve", _buildOid(1, 3, 132, 0, 10))
-    ecPrivateKey.setComponentByName('parameters', ecParam)
-    
-    ecPrivateKey.setComponentByName('publicKey', long(pub, 16))
+    tecPrivateKey.setComponentByName('parameters', ecParam)
 
-    # print ecPrivateKey.prettyPrint()
+    # print tecPrivateKey.prettyPrint()
+
+    hex_dump(tecPrivateKey)
 
     res = "-----BEGIN THRESHOLD EC PRIVATE KEY-----\n"
 
-    b = base64.b64encode(der_encoder(ecPrivateKey))
+    b = base64.b64encode(der_encoder(tecPrivateKey))
     n = 64
     r = [b[i:i+n] for i in range(0, len(b), n)]
     for l in r:
@@ -374,11 +368,20 @@ def gen_pem(name1, name2):
     with open(name1, 'w') as file1:
         with open(name2, 'w') as file2:
             generate_tecdsa_pem(priv1, pub, privEncPriv, pairedEncPub)
-            # generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub)
-            # file1.write(generate_tecdsa_pem(priv1, pub, privEncPriv, pairedEncPub))
-            # file2.write(generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub))
+            generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub)
+            file1.write(generate_tecdsa_pem(priv1, pub, privEncPriv, pairedEncPub))
+            file2.write(generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub))
+
+def create_enc_message(key):
+    enc_message = HEEncryptedMessage()
+    c, r = paillier.encrypt(123456789, key)
+    enc_message['message'] = c
+
+    hex_dump(enc_message)
+
 
 if __name__ == '__main__':
-    gen_pem('id_tecdsa1', 'id_tecdsa2')
+    print "PEM"
+    # gen_pem('id_tecdsa1', 'id_tecdsa2')
     # parse_tecdsa_pem('id_tecdsa1')
     # parse_tecdsa_pem('id_tecdsa2')

@@ -3,6 +3,8 @@ import hashlib
 import paillier
 import ecdsa
 import eczkp
+import eczkp_pem
+import pem
 import utils
 
 def alice_round_1(m, x1, y1, ka_pub, ka_priv):
@@ -23,16 +25,16 @@ def alice_round_2(alpha, zeta, r2, k1, y1, z1, x1, zkp, ka_pub, rr1, rr2):
     eta2 = (x1 * z1) % ecdsa.n
     r = ecdsa.point_mult(r2, k1)
     
-    c = r
-    d = ecdsa.G
-    w1 = r2
-    w2 = y1
+    c = r # POINT
+    d = ecdsa.G # POINT
+    w1 = r2 # POINT
+    w2 = y1 # POINT
     m1 = alpha
     m2 = zeta
     x1 = eta1
     x2 = eta2
-    r1 = rr1
-    r2 = rr2
+    r1 = rr1 # RANDOM ALPHA ENC
+    r2 = rr2 # RANDOM ZETA ENC
 
     pi = eczkp.pi(c, d, w1, w2, m1, m2, r1, r2, x1, x2, zkp, ka_pub)
     return r, pi
@@ -126,6 +128,9 @@ def run_secdsa():
     # pub_a = ecdsa.point_mult(y2, x1)
     # pub_b = ecdsa.point_mult(y1, x2)
 
+    pem.generate_tecdsa_pem(x1, pub, ka_priv, kb_pub)
+    pem.generate_tecdsa_pem(x2, pub, kb_priv, ka_pub)
+
     # Message hash
     message = "hello"
     h = hashlib.sha256()
@@ -141,9 +146,12 @@ def run_secdsa():
 
     # ALICE ROUND 2
     r, pi = alice_round_2(alpha, zeta, r2, k1, y1, z1, x1, zkp, ka_pub, rr1, rr2)
+    # eczkp_pem.pi_to_pem(pi)
+
     # BOB ROUND 2
     mu, mup, pi2 = bob_round_2(pi, m, alpha, zeta, r, k2, x2, r2, y1, y2, ka_pub, kb_pub, zkp)
-
+    # eczkp_pem.pi_to_pem2(pi2)
+    
     # ALICE ROUND 3 (final)
     sig = alice_round_3(pi2, r, r2, y2, mup, mu, alpha, zeta, zkp, ka_priv, kb_pub)
 
