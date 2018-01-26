@@ -128,8 +128,8 @@ def run_secdsa():
     # pub_a = ecdsa.point_mult(y2, x1)
     # pub_b = ecdsa.point_mult(y1, x2)
 
-    pem.generate_tecdsa_pem(x1, pub, ka_priv, kb_pub)
-    pem.generate_tecdsa_pem(x2, pub, kb_priv, ka_pub)
+    pem.generate_tecdsa_pem(x1, ecdsa.expand_pub(pub), y2, ka_priv, kb_pub, zkp)
+    pem.generate_tecdsa_pem(x2, ecdsa.expand_pub(pub), y1, kb_priv, ka_pub, zkp)
 
     # Message hash
     message = "hello"

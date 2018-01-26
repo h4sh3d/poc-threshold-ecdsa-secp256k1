@@ -55,6 +55,7 @@ def R_old(n):
         return r
 
 def R(n):
+    return utils.randomnumber(n)
     while True:
         r = utils.randomnumber(n)
         if utils.nonrec_gcd(r, n) == 1:

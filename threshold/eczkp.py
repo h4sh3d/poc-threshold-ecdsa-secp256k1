@@ -33,6 +33,7 @@ def pi(c, d, w1, w2, m1, m2, r1, r2, x1, x2, zkp, ka_pub):
     pkn, g = ka_pub
     n3 = pow(ecdsa.n, 3)
     n3ntild = n3 * Ntild
+
     alpha = utils.randomnumber(n3)
     beta = rnd_inv(pkn)
     gamma = utils.randomnumber(n3ntild)
@@ -46,14 +47,14 @@ def pi(c, d, w1, w2, m1, m2, r1, r2, x1, x2, zkp, ka_pub):
     n2 = pkn * pkn
 
     z1 = (pow(h1, x1, Ntild) * pow(h2, p1, Ntild)) % Ntild
-    u1 = ecdsa.point_mult(c, alpha)
+    u1 = ecdsa.point_mult(c, alpha) # POINT
     u2 = (pow(g, alpha, n2) * pow(beta, pkn, n2)) % n2
     u3 = (pow(h1, alpha, Ntild) * pow(h2, gamma, Ntild)) % Ntild
 
     z2 = (pow(h1, x2, Ntild) * pow(h2, p2, Ntild)) % Ntild
-    y = ecdsa.point_mult(d, x2 + p3)
-    v1 = ecdsa.point_mult(d, delta + epsilon)
-    v2 = ecdsa.point_add(ecdsa.point_mult(w2, alpha), ecdsa.point_mult(d, epsilon))
+    y = ecdsa.point_mult(d, x2 + p3) # POINT
+    v1 = ecdsa.point_mult(d, delta + epsilon) # POINT
+    v2 = ecdsa.point_add(ecdsa.point_mult(w2, alpha), ecdsa.point_mult(d, epsilon)) # POINT
 
     v3 = (pow(g, delta, n2) * pow(mu, pkn, n2)) % n2
     v4 = (pow(h1, delta, Ntild) * pow(h2, nu, Ntild)) % Ntild

@@ -4,6 +4,7 @@ import base64
 import binascii
 import ecdsa
 import paillier
+import eczkp
 from pyasn1.codec.der.decoder import decode
 from pyasn1.type import namedtype, univ, tag
 from pyasn1.compat.octets import ints2octs, octs2ints
@@ -162,6 +163,20 @@ class HEEncryptedMessage(univ.Sequence):
         namedtype.NamedType("message", univ.Integer())
     )
 
+class ZKPParameter(univ.Sequence):
+    """Zero-knowledge proofs parameters
+    ZKPParameter ::= SEQUENCE {
+        modulus            INTEGER,
+        h1                 INTEGER,
+        h2                 INTEGER
+    }
+    """
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType("modulus", univ.Integer()),
+        namedtype.NamedType("h1", univ.Integer()),
+        namedtype.NamedType("h2", univ.Integer())
+    )
+
 class ThresholdECPrivateKey(univ.Sequence):
     """Threshold Elliptic Curve Private Key Structure
     ThresholdECPrivateKey ::= SEQUENCE {
@@ -169,6 +184,8 @@ class ThresholdECPrivateKey(univ.Sequence):
         privateShare         OCTET STRING,
         privateEnc           HEPrivateKey,
         pairedPublicEnc      HEPublicKey,
+        zkpParameters        ZKPParameter,
+        pairedPublicShare    OCTET STRING,
         publicKey            OCTET STRING,
         parameters       [0] ECParameters {{ NamedCurve }} OPTIONAL
     }
@@ -178,6 +195,8 @@ class ThresholdECPrivateKey(univ.Sequence):
         namedtype.NamedType("privateShare", univ.OctetString()),
         namedtype.NamedType("privateEnc", HEPrivateKey()),
         namedtype.NamedType("pairedPublicEnc", HEPublicKey()),
+        namedtype.NamedType("zkpParameters", ZKPParameter()),
+        namedtype.NamedType("pairedPublicShare", univ.OctetString()),
         namedtype.NamedType("publicKey", univ.OctetString()),
         namedtype.OptionalNamedType("parameters", 
             ECParameters().subtype(
@@ -257,7 +276,7 @@ def generate_ecdsa_pem(pk):
     res += "-----END EC PRIVATE KEY-----\n"
     return res
 
-def generate_tecdsa_pem(share, pub, privEnc, pairedEnc):
+def generate_tecdsa_pem(share, pub, pubshare, privEnc, pairedEnc, zkp):
     tecPrivateKey = ThresholdECPrivateKey()
     tecPrivateKey['version'] = 1
     tecPrivateKey['privateShare'] = ints2octs(i2osp(share, 32))
@@ -288,8 +307,21 @@ def generate_tecdsa_pem(share, pub, privEnc, pairedEnc):
 
     tecPrivateKey.setComponentByName('pairedPublicEnc', publicEnc)
 
+    n, h1, h2 = zkp
+    # zkpParameters
+    zkpParameters = ZKPParameter()
+    zkpParameters['modulus'] = n
+    zkpParameters['h1'] = h1
+    zkpParameters['h2'] = h2
+
+    tecPrivateKey.setComponentByName('zkpParameters', zkpParameters)
+
+    tecPrivateKey.setComponentByName('pairedPublicShare', univ.OctetString(
+        hexValue=ecdsa.expand_pub(pubshare)
+    ))
+
     tecPrivateKey.setComponentByName('publicKey', univ.OctetString(
-        hexValue=ecdsa.expand_pub(pub)
+        hexValue=pub
     ))
 
     ecParam = ECParameters().subtype(
@@ -365,12 +397,15 @@ def gen_pem(name1, name2):
     privEncPub, privEncPriv = paillier.gen_key()
     pairedEncPub, pairedEncPriv = paillier.gen_key()
 
-    with open(name1, 'w') as file1:
-        with open(name2, 'w') as file2:
-            generate_tecdsa_pem(priv1, pub, privEncPriv, pairedEncPub)
-            generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub)
-            file1.write(generate_tecdsa_pem(priv1, pub, privEncPriv, pairedEncPub))
-            file2.write(generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub))
+    zkp = eczkp.gen_params(1024)
+
+    generate_tecdsa_pem(priv1, pub, pub2, privEncPriv, pairedEncPub, zkp)
+    generate_tecdsa_pem(priv2, pub, pub1, pairedEncPriv, privEncPub, zkp)
+
+    # with open(name1, 'w') as file1:
+    #     with open(name2, 'w') as file2:
+    #         file1.write(generate_tecdsa_pem(priv1, pub, privEncPriv, pairedEncPub, zkp))
+    #         file2.write(generate_tecdsa_pem(priv2, pub, pairedEncPriv, privEncPub, zkp))
 
 def create_enc_message(key):
     enc_message = HEEncryptedMessage()
@@ -382,6 +417,6 @@ def create_enc_message(key):
 
 if __name__ == '__main__':
     print "PEM"
-    # gen_pem('id_tecdsa1', 'id_tecdsa2')
+    gen_pem('id_tecdsa1', 'id_tecdsa2')
     # parse_tecdsa_pem('id_tecdsa1')
     # parse_tecdsa_pem('id_tecdsa2')
