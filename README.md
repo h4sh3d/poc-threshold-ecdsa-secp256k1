@@ -5,8 +5,59 @@ This sofware is a NON-SECURE implementation of Gallois Field, Paillier, DSA, ECD
 and curve secp256k1 with an adapted scheme of "Two-party generation of DSA signatures" 
 by MacKenzie and Reiter.
 
-This Python implementation is a playground for testing threshold ECDSA signature and 
-zero-knowledge proofs. DO NOT USE THIS SOFTWARE IN PRODUCTION.
+This Python implementation is fully working playground for testing threshold ECDSA signature and 
+zero-knowledge proofs. `DO NOT USE THIS SOFTWARE IN PRODUCTION`.
+
+## Run threshold DSA
+
+	./sdsa.py
+
+## Run threshold ECDSA
+
+	./secdsa.py
+
+Example of output:
+
+	S-ECDSA
+	Message to sign:  hello
+	Hash:  20329878786436204988385760252021328656300425018755239228739303522659023427620
+
+	****************************************
+	Verifying Pi zkp:
+	e 8669279804349708267835438595031826015672902321766879037734710771687691653466
+	e' 8669279804349708267835438595031826015672902321766879037734710771687691653466
+	****************************************
+
+	****************************************
+	Verifying Pi' zkp:
+	e 7714058597675414236828834093006726768707290874693083520197560304188445823350863448364744329951698553995641717014355674795155268564593258164832042004521410
+	e' 7714058597675414236828834093006726768707290874693083520197560304188445823350863448364744329951698553995641717014355674795155268564593258164832042004521410
+	****************************************
+
+	Signature:
+	(32974799913108878209330187171105057936970144405297335357277487677862278385214L, 73156823565623501676664450330143665062103177285848278891453648066390022897196L)
+	Sig status:  True
+
+## Generate Keypair in DER-encoding
+The `pem.py` file can produce DER-encoded keypairs for the threshold. Currently the result 
+is outputed in the console in binary format (bytes-array w/ lenght).
+
+	./pem.py
+
+Example of output:
+
+	PEM
+	0x30, 0x82, 0x10, 0x75, 0x02, 0x01, 0x01, 0x04, 0x20, 0x32, 0x1f, 0x12, 0xaa, 0x6d, 0xb2, 0xe5,
+	0xf6, 0xf3, 0x9c, 0x8f, 0xdb, 0xda, 0x3a, 0xf4, 0x81, 0xbf, 0x15, 0x5a, 0xbc, 0x37, 0xd6, 0xf8,
+	...
+	0x28, 0xb7, 0x53, 0xc5, 0xdd, 0xd0, 0x34, 0xc3, 0x27, 0xdf, 0xd6, 0x05, 0x6c, 0x7a, 0xf7, 0xcc,
+	0xa0, 0x07, 0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x0a,
+	4217
+	0x30, 0x82, 0x10, 0x74, 0x02, 0x01, 0x01, 0x04, 0x20, 0x93, 0x59, 0xbf, 0xbc, 0x5f, 0x6d, 0x9b,
+	...
+	0xb7, 0x53, 0xc5, 0xdd, 0xd0, 0x34, 0xc3, 0x27, 0xdf, 0xd6, 0x05, 0x6c, 0x7a, 0xf7, 0xcc, 0xa0,
+	0x07, 0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x0a,
+	4216
 
 ## Disclaimer
 
