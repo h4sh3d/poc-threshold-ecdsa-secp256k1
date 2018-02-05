@@ -174,25 +174,19 @@ class Share(object):
     def address(self):
         return get(self.pub())
 
-    def compute_master_pub(self, point):
-        return ecdsa.point_mult(point, self.secret)
-
     def set_master_pub(self, pub):
         self.master_pub = pub
 
     def d_pub(self, i):
-        if i >= pow(2, 31):
+        if i >= pow(2, 31): # Only not hardened
             raise Exception("Impossible to hardened")
-        # Not hardened
         k = "%x" % self.chain
         data = "00%s%08x" % (ecdsa.expand_pub(self.master_pub), i)
         hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
-        l = binascii.hexlify(hmac)
-        point = ecdsa.point_mult(self.master_pub, long(l, 16))
+        point = ecdsa.point_mult(self.master_pub, long(binascii.hexlify(hmac), 16))
         data = "%08x" % (i)
         hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
-        l = binascii.hexlify(hmac)
-        c = long(l, 16)
+        c = long(binascii.hexlify(hmac), 16)
         share = Share(c, self.master, self.secret)
         share.set_master_pub(point)
         return share
@@ -201,20 +195,14 @@ class Share(object):
         k = "%x" % self.chain
         data = "%08x" % (i)
         hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
-        l = binascii.hexlify(hmac)
-        c = long(l, 16)
-        if i >= pow(2, 31):
-            # Hardened
-            data = "00%32x%08x" % (self.secret, i)
-            
-        else:
-            # Not hardened
+        c = long(binascii.hexlify(hmac), 16)
+        if i >= pow(2, 31): # Hardened
+            data = "00%32x%08x" % (self.secret, i) 
+        else: # Not hardened
             data = "00%s%08x" % (ecdsa.expand_pub(self.master_pub), i)
-            
         hmac = hashlib.pbkdf2_hmac('sha256', k, data, 100)
-        l = binascii.hexlify(hmac)
-        key = long(l, 16) * self.secret
-        point = ecdsa.point_mult(self.master_pub, long(l, 16))
+        key = long(binascii.hexlify(hmac), 16) * self.secret
+        point = ecdsa.point_mult(self.master_pub, long(binascii.hexlify(hmac), 16))
         share = Share(c, self.master, key)
         share.set_master_pub(point)
         return share
@@ -254,54 +242,54 @@ class Threshold(object):
                 p = share.pub()
                 continue
             p = share.compute_master_pub(p)
+            # def compute_master_pub(self, point):
+            #     return ecdsa.point_mult(point, self.secret)
         return p
 
     def get_address(self):
         return get(self.get_pub())
 
 if __name__ == "__main__":
-    print("Threshold addresses")
-    pub, priv = ecdsa.key_gen()
+    print("=== Threshold addresses ===")
 
     chain = ecdsa.gen_priv()
     # Shares
     s1 = Share(chain, True, ecdsa.gen_priv())
     s2 = Share(chain, False, ecdsa.gen_priv())
     s3 = Share(chain, False, ecdsa.gen_priv())
-    t = Threshold(s1, s2, s3)
-    maspub = t.get_pub()
-    add = t.get_address()
-    print(add)
 
-    s1.set_master_pub(maspub)
-    s2.set_master_pub(maspub)
-    s3.set_master_pub(maspub)
+    sec = (s1.secret * s2.secret * s3.secret) % ecdsa.n
+    pub = ecdsa.get_pub(sec)
+    add = get(pub)
+    print "Master root public key m/   :", add
 
-    print "Addresses before"
-    print s1.address()
-    print s2.address()
-    print s3.address()
+    s1.set_master_pub(pub)
+    s2.set_master_pub(pub)
+    s3.set_master_pub(pub)
 
-    print "Hardened derivation"
-    print get(s1.derive("m/44/0/1").master_pub)
-    print get(s1.derive("m/44/0/1'").master_pub)
+    print "\n*** Individual addresses m/ ***"
+    print "s1:", s1.address()
+    print "s2:", s2.address()
+    print "s3:", s3.address()
 
+    print "\n*** Hardened derivation for one share ***"
+    print "s1 m/44/0/1  :", get(s1.derive("m/44/0/1").master_pub)
+    print "s1 m/44/0/1' :", get(s1.derive("m/44/0/1'").master_pub)
 
-    print "Master public key"
+    print "\n*** Master public key m/44/0/1 ***"
     s1 = s1.derive("m/44/0/1")
     s2 = s2.derive("m/44/0/1")
     s3 = s3.derive("m/44/0/1")
-    print get(s1.master_pub)
-    print get(s2.master_pub)
-    print get(s3.master_pub)
+    print "s1:", get(s1.master_pub)
+    print "s2:", get(s2.master_pub)
+    print "s3:", get(s3.master_pub)
 
-    print "Compute Master public key"
-    t = Threshold(s1, s2, s3)
-    maspub = t.get_pub()
-    add = t.get_address()
-    print(add)
+    sec = (s1.secret * s2.secret * s3.secret) % ecdsa.n
+    pub = ecdsa.get_pub(sec)
+    add = get(pub)
+    print "\nMaster public key m/44/0/1 :", add
     
-    print "Addresses after"
-    print s1.address()
-    print s2.address()
-    print s3.address()
+    print "\n*** Individual addresses m/44/0/1 ***"
+    print "s1:", s1.address()
+    print "s2:", s2.address()
+    print "s3:", s3.address()
